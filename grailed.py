@@ -37,13 +37,15 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 config = { "DiscordWebHook" : "", "Brand" : []}
 
-def SendWebHook(title, url, price, currency, size, brand, photo, WHook):
+def SendWebHook(title, url, price, currency, size, brand, photo, condition, WHook):
     webhook = DiscordWebhook(rate_limit_retry=True, url=WHook)
-    embed = DiscordEmbed(title= 'New Product Found!', description= "**[" + title + ']' + "(" + url + ")**", color='0db7d8')  # Colore in formato esadecimale
-    embed.add_embed_field(name='Prezzo:', value= price + ' ' + currency, inline=True)
-    embed.add_embed_field(name='Taglia:', value= size, inline=True)
-    embed.add_embed_field(name='Brand:', value= brand, inline=True)
+    embed = DiscordEmbed(title= '📢New Product Found!', description= "**[" + title + ']' + "(" + url + ")**", color='0db7d8')  # Colore in formato esadecimale
+    embed.add_embed_field(name='💰Price:', value= price + ' ' + currency, inline=True)
+    embed.add_embed_field(name='👕Condition:', value= condition, inline=True)
+    embed.add_embed_field(name='📏Size:', value= size, inline=True)
+    embed.add_embed_field(name='👚Brand:', value= brand, inline=True)
     embed.set_thumbnail(url=photo)
+    embed.set_footer(text=datetime.now().strftime("%Y/%m/%d %H:%M:%S:%f")[:-3])
     webhook.add_embed(embed)
     response = webhook.execute()
 
@@ -79,7 +81,6 @@ if __name__ == "__main__":
     print(Fore.WHITE  + '[' + (datetime.now().strftime("%Y/%m/%d %H:%M:%S:%f")[:-3]) + '] : ' + 'Starting...' + Fore.RESET)
     config = CheckConfig("Config.json", config)
     while True:
-
         headers = {
             'Accept': '/',
             'Accept-Language': 'it-IT,it;q=0.9',
@@ -103,7 +104,7 @@ if __name__ == "__main__":
                     print(Fore.BLUE  + '[' + (datetime.now().strftime("%Y/%m/%d %H:%M:%S:%f")[:-3]) + '] : ' + 'Sending webhook' + Fore.RESET)
                     for item in response:
                         product_url = 'https://www.grailed.com/' + (requests.get('https://www.grailed.com/api/listings/' + str(item['id']), headers=headers).json()['data']['pretty_path'])
-                        SendWebHook(item['title'], product_url, str(item['price']), item['currency'], item['size'], item['designer_names'], item['retina_cover_photo']['url'], config['DiscordWebHook'])
+                        SendWebHook(item['title'], product_url, str(item['price']), item['currency'], item['size'], item['designer_names'], item['retina_cover_photo']['url'], (((item['condition']).replace('is_', ' ').replace('_', ' '))).capitalize(), config['DiscordWebHook'])
                         Storage['ids'].append(item['id'])
                         with open('List.json', "w") as file:
                             json.dump(Storage, file, indent=4)

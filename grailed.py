@@ -37,13 +37,15 @@ logging.getLogger("requests").setLevel(logging.WARNING)
 
 config = { "DiscordWebHook" : "", "Brand" : []}
 
-def SendWebHook(title, url, price, currency, size, brand, photo, condition, WHook):
+def SendWebHook(title, url, price, currency, size, brand, photo, condition, RatingSeller, shipping, WHook):
     webhook = DiscordWebhook(rate_limit_retry=True, url=WHook)
-    embed = DiscordEmbed(title= '📢New Product Found!', description= "**[" + title + ']' + "(" + url + ")**", color='0db7d8')  # Colore in formato esadecimale
+    embed = DiscordEmbed(title= '📢 New Product Found!', description= "**[" + title + ']' + "(" + url + ")**", color='0db7d8')  # Colore in formato esadecimale
     embed.add_embed_field(name='💰Price:', value= price + ' ' + currency, inline=True)
     embed.add_embed_field(name='👕Condition:', value= condition, inline=True)
     embed.add_embed_field(name='📏Size:', value= size, inline=True)
     embed.add_embed_field(name='👚Brand:', value= brand, inline=True)
+    embed.add_embed_field(name='⭐Rating:', value= RatingSeller, inline=True)
+    embed.add_embed_field(name='🚚Shipping Costs:', value= shipping, inline=False)
     embed.set_thumbnail(url=photo)
     embed.set_footer(text=datetime.now().strftime("%Y/%m/%d %H:%M:%S:%f")[:-3])
     webhook.add_embed(embed)
@@ -103,8 +105,14 @@ if __name__ == "__main__":
                 if len(response) > 0:
                     print(Fore.BLUE  + '[' + (datetime.now().strftime("%Y/%m/%d %H:%M:%S:%f")[:-3]) + '] : ' + 'Sending webhook' + Fore.RESET)
                     for item in response:
-                        product_url = 'https://www.grailed.com/' + (requests.get('https://www.grailed.com/api/listings/' + str(item['id']), headers=headers).json()['data']['pretty_path'])
-                        SendWebHook(item['title'], product_url, str(item['price']), item['currency'], item['size'], item['designer_names'], item['retina_cover_photo']['url'], (((item['condition']).replace('is_', ' ').replace('_', ' '))).capitalize(), config['DiscordWebHook'])
+                        product_data = requests.get('https://www.grailed.com/api/listings/' + str(item['id']), headers=headers).json()['data']
+                        shipping = ''
+                        for k in product_data['shipping'].keys():
+                            if product_data['shipping'][k]['enabled'] == True:
+                                shipping = shipping + '- ' + k.replace('us', '🇺🇸').replace('ca', '🇨🇦').replace('eu', '🇪🇺').replace('uk', '🇬🇧').replace('au', '🇦🇺') + ' ' + str(product_data['shipping'][k]['amount']) + ' ' + product_data['currency'] + ' \n'
+
+                        product_url = 'https://www.grailed.com/' + (product_data['pretty_path'])
+                        SendWebHook(item['title'], product_url, str(item['price']), item['currency'], item['size'], item['designer_names'], item['retina_cover_photo']['url'], (((item['condition']).replace('is_', ' ').replace('_', ' '))).capitalize(), str(product_data['seller']['seller_score']['rating_average']), shipping,config['DiscordWebHook'])
                         Storage['ids'].append(item['id'])
                         with open('List.json', "w") as file:
                             json.dump(Storage, file, indent=4)
